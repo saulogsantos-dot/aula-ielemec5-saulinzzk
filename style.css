@@ -1,0 +1,1030 @@
+/* ==========================================================================
+   PIZZARIA MAMMA MIA! - STYLE.CSS
+   Estilização moderna, responsiva e temática inspirada em Papa's Pizzeria.
+   Utiliza CSS Grid, Flexbox, Variáveis CSS e Animações Fluidas.
+   ========================================================================== */
+
+/* --------------------------------------------------------------------------
+   1. VARIÁVEIS GLOBAIS DE CORES E MEDIDAS
+   -------------------------------------------------------------------------- */
+:root {
+  --primary-red: #c92a2a;
+  --primary-dark-red: #a61e1e;
+  --cheese-gold: #f59e0b;
+  --cheese-light: #fef08a;
+  --sauce-red: #dc2626;
+  --crust-color: #d97706;
+  --olive-color: #1c1917;
+  --basil-green: #15803d;
+  --bg-color: #fbf7ee;
+  --card-bg: #ffffff;
+  --text-dark: #1f2937;
+  --text-muted: #6b7280;
+  --border-color: #e5e7eb;
+  --success-green: #10b981;
+  --warning-amber: #f59e0b;
+  --danger-red: #ef4444;
+
+  --font-display: 'Fredoka', cursive, sans-serif;
+  --font-body: 'Nunito', -apple-system, BlinkMacSystemFont, sans-serif;
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  --shadow-pizza: 0 12px 24px rgba(180, 83, 9, 0.3);
+}
+
+/* --------------------------------------------------------------------------
+   2. RESET BÁSICO E CONFIGURAÇÃO TIPOGRÁFICA
+   -------------------------------------------------------------------------- */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: var(--font-body);
+  background-color: var(--bg-color);
+  color: var(--text-dark);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background-image: radial-gradient(#e5e7eb 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
+/* --------------------------------------------------------------------------
+   3. CABEÇALHO DO JOGO (STATUS BAR & RECORDES)
+   -------------------------------------------------------------------------- */
+.game-header {
+  background: linear-gradient(135deg, var(--primary-red), var(--primary-dark-red));
+  color: #ffffff;
+  padding: 1rem 1.5rem;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  box-shadow: var(--shadow-md);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.logo-container {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.logo-icon {
+  font-size: 2.4rem;
+  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));
+  animation: bounceSlow 3s infinite ease-in-out;
+}
+
+.game-title {
+  font-family: var(--font-display);
+  font-size: 1.6rem;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  line-height: 1.1;
+  text-shadow: 1px 2px 3px rgba(0, 0, 0, 0.3);
+}
+
+.game-subtitle {
+  font-size: 0.8rem;
+  opacity: 0.9;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+/* Barra de Estatísticas */
+.stats-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.stat-box {
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  padding: 0.45rem 0.85rem;
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  min-width: 90px;
+  text-align: center;
+}
+
+.stat-label {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  color: #fde047;
+  font-weight: 700;
+}
+
+.stat-value {
+  font-family: var(--font-display);
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.cash-box .stat-value {
+  color: #86efac;
+}
+
+.record-box .stat-value {
+  color: #fde047;
+}
+
+/* --------------------------------------------------------------------------
+   4. LAYOUT PRINCIPAL (GRID DAS SEÇÕES)
+   -------------------------------------------------------------------------- */
+.game-container {
+  flex: 1;
+  max-width: 1400px;
+  width: 100%;
+  margin: 1.5rem auto;
+  padding: 0 1rem;
+  display: grid;
+  grid-template-columns: 320px 1fr 340px;
+  gap: 1.5rem;
+}
+
+/* Estilo Base dos Cards */
+.card {
+  background: var(--card-bg);
+  border-radius: 20px;
+  padding: 1.25rem;
+  box-shadow: var(--shadow-md);
+  border: 1px solid var(--border-color);
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  overflow: hidden;
+}
+
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 2px dashed #f3f4f6;
+}
+
+.section-header h2 {
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+  color: var(--primary-dark-red);
+}
+
+.hint-text {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+/* --------------------------------------------------------------------------
+   5. SEÇÃO DO CLIENTE & COMANDA (TICKET)
+   -------------------------------------------------------------------------- */
+.order-section {
+  background: #fffdfa;
+}
+
+.client-badge {
+  background: #fee2e2;
+  color: var(--primary-dark-red);
+  font-size: 0.75rem;
+  font-weight: 800;
+  padding: 0.25rem 0.6rem;
+  border-radius: 20px;
+}
+
+.client-area {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+}
+
+.client-avatar {
+  font-size: 3rem;
+  background: #fef3c7;
+  border: 3px solid #fde047;
+  border-radius: 50%;
+  width: 70px;
+  height: 70px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: var(--shadow-sm);
+  flex-shrink: 0;
+}
+
+.speech-bubble {
+  background: #ffffff;
+  border: 2px solid var(--border-color);
+  border-radius: 14px;
+  padding: 0.65rem 0.85rem;
+  font-size: 0.85rem;
+  font-style: italic;
+  position: relative;
+  box-shadow: var(--shadow-sm);
+}
+
+.speech-bubble::before {
+  content: '';
+  position: absolute;
+  left: -8px;
+  top: 50%;
+  transform: translateY(-50%);
+  border-width: 6px 8px 6px 0;
+  border-style: solid;
+  border-color: transparent #ffffff transparent transparent;
+  display: block;
+  width: 0;
+}
+
+/* Ticket de Papel Realista */
+.order-ticket {
+  background: #fefce8;
+  border: 2px solid #fef08a;
+  border-radius: 12px;
+  padding: 1rem;
+  position: relative;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+  font-family: 'Courier New', Courier, monospace;
+}
+
+.ticket-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 2px dashed #ca8a04;
+  padding-bottom: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.ticket-title {
+  font-weight: 900;
+  font-size: 0.85rem;
+  letter-spacing: 1px;
+  color: #854d0e;
+}
+
+.ticket-stamp {
+  background: #ef4444;
+  color: #ffffff;
+  font-size: 0.65rem;
+  font-weight: 800;
+  padding: 0.15rem 0.4rem;
+  border-radius: 4px;
+  transform: rotate(-5deg);
+}
+
+.ticket-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+}
+
+.ticket-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  color: #451a03;
+}
+
+.ticket-toppings-list {
+  list-style: none;
+  text-align: right;
+  font-weight: 700;
+  color: #b91c1c;
+}
+
+.badge-target {
+  background: #dcfce7;
+  color: #15803d;
+  font-weight: 700;
+  padding: 0.15rem 0.4rem;
+  border-radius: 6px;
+  font-size: 0.75rem;
+}
+
+/* --------------------------------------------------------------------------
+   6. BANCADA DE MONTAGEM DA PIZZA (WORKBENCH)
+   -------------------------------------------------------------------------- */
+.kitchen-section {
+  display: flex;
+  flex-direction: column;
+}
+
+.pizza-workbench {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: #fdfbf7;
+  border: 2px dashed #f3e8d6;
+  border-radius: 20px;
+  padding: 1.5rem;
+  margin-bottom: 1.25rem;
+  position: relative;
+}
+
+/* Tábua de Pizza de Madeira */
+.pizza-board {
+  width: 280px;
+  height: 280px;
+  background: #e2a65e;
+  border-radius: 50%;
+  border: 10px solid #c78038;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.2), var(--shadow-pizza);
+  position: relative;
+}
+
+/* O Disco da Pizza */
+.pizza {
+  width: 240px;
+  height: 240px;
+  border-radius: 50%;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.25);
+  background: #f3efe6;
+  transition: transform 0.2s ease;
+}
+
+/* Camada 1: Borda da Massa */
+.pizza-crust {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: radial-gradient(circle, #fde68a 60%, var(--crust-color) 88%, #92400e 100%);
+  border: 8px solid #b45309;
+  transition: all 0.3s ease;
+}
+
+.pizza-crust.fina {
+  border-width: 4px;
+  background: radial-gradient(circle, #fef08a 70%, #d97706 94%, #78350f 100%);
+}
+
+/* Camada 2: Molho de Tomate ou Branco */
+.pizza-sauce {
+  position: absolute;
+  inset: 12px;
+  border-radius: 50%;
+  background: radial-gradient(circle, #ef4444 30%, #b91c1c 90%);
+  box-shadow: inset 0 0 10px rgba(0,0,0,0.3);
+  transition: opacity 0.3s ease, background 0.3s ease;
+}
+
+.pizza-sauce.branco {
+  background: radial-gradient(circle, #fef9c3 30%, #fef08a 90%);
+}
+
+/* Camada 3: Queijo Derretido */
+.pizza-cheese {
+  position: absolute;
+  inset: 16px;
+  border-radius: 50%;
+  background: radial-gradient(circle, #fef08a 20%, #f59e0b 85%);
+  opacity: 0.95;
+  box-shadow: inset 0 0 8px rgba(180, 83, 9, 0.4);
+  transition: opacity 0.3s ease;
+}
+
+.pizza-cheese.parmesao {
+  background: radial-gradient(circle, #fef9c3 30%, #fde047 90%);
+}
+
+/* Camada 4: Recheios (Toppings) */
+.pizza-toppings {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+/* Elementos de Recheio Dinâmicos */
+.topping-item {
+  position: absolute;
+  width: 26px;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.3rem;
+  transform: translate(-50%, -50%);
+  animation: popTopping 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  filter: drop-shadow(0 2px 3px rgba(0,0,0,0.35));
+}
+
+/* Efeito de Assado ou Queimado sobre a Pizza */
+.pizza-bake-overlay {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: transparent;
+  pointer-events: none;
+  transition: background 0.4s ease;
+}
+
+.pizza-bake-overlay.baked-perfect {
+  background: radial-gradient(circle, rgba(217, 119, 6, 0.25) 30%, rgba(180, 83, 9, 0.45) 90%);
+}
+
+.pizza-bake-overlay.baked-burnt {
+  background: radial-gradient(circle, rgba(28, 25, 23, 0.75) 40%, rgba(0, 0, 0, 0.92) 90%);
+  box-shadow: inset 0 0 30px #000000;
+}
+
+/* Caixa com Lista de Ingredientes Colocados */
+.current-ingredients-box {
+  width: 100%;
+  margin-top: 1rem;
+  text-align: center;
+}
+
+.current-ingredients-box h3 {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  margin-bottom: 0.5rem;
+}
+
+.tags-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  justify-content: center;
+  min-height: 28px;
+}
+
+.ingredient-tag {
+  background: #fef3c7;
+  color: #92400e;
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 0.25rem 0.6rem;
+  border-radius: 12px;
+  border: 1px solid #fde68a;
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  animation: fadeIn 0.2s ease;
+}
+
+.empty-tag {
+  font-size: 0.75rem;
+  color: #9ca3af;
+  font-style: italic;
+}
+
+/* Seletor de Ingredientes em Grade */
+.ingredients-selector {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 0.75rem;
+  margin-bottom: 1.25rem;
+}
+
+.ingredient-category {
+  background: #f9fafb;
+  border: 1px solid var(--border-color);
+  border-radius: 14px;
+  padding: 0.65rem;
+}
+
+.category-title {
+  display: block;
+  font-size: 0.75rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  color: var(--primary-dark-red);
+  margin-bottom: 0.5rem;
+  border-bottom: 1px solid #e5e7eb;
+  padding-bottom: 0.25rem;
+}
+
+.buttons-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+/* Botões de Ingrediente */
+.btn-ingredient {
+  background: #ffffff;
+  border: 1px solid #d1d5db;
+  border-radius: 10px;
+  padding: 0.45rem 0.6rem;
+  font-family: var(--font-body);
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--text-dark);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  transition: all 0.15s ease;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.btn-ingredient:hover {
+  background: #fef2f2;
+  border-color: var(--primary-red);
+  transform: translateY(-1px);
+}
+
+.btn-ingredient:active {
+  transform: scale(0.97);
+}
+
+.btn-ingredient.active {
+  background: var(--primary-red);
+  color: #ffffff;
+  border-color: var(--primary-dark-red);
+  box-shadow: 0 2px 4px rgba(201, 42, 42, 0.3);
+}
+
+/* Ações da Bancada */
+.kitchen-actions {
+  display: flex;
+  gap: 0.75rem;
+  margin-top: auto;
+}
+
+/* --------------------------------------------------------------------------
+   7. ESTAÇÃO DO FORNO (OVEN STATION)
+   -------------------------------------------------------------------------- */
+.oven-section {
+  background: #fffafa;
+}
+
+.oven-status-badge {
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 0.2rem 0.6rem;
+  border-radius: 12px;
+  background: #f3f4f6;
+  color: var(--text-muted);
+}
+
+.oven-display-container {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  align-items: center;
+}
+
+/* Gráfico do Forno a Lenha */
+.oven-graphic {
+  width: 100%;
+  height: 180px;
+  background: #78350f;
+  border-radius: 20px 20px 8px 8px;
+  border: 6px solid #451a03;
+  position: relative;
+  overflow: hidden;
+  box-shadow: inset 0 0 30px rgba(0, 0, 0, 0.5), var(--shadow-md);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+.oven-door {
+  width: 75%;
+  height: 120px;
+  background: radial-gradient(ellipse at bottom, #1c1917 40%, #0c0a09 100%);
+  border-radius: 80px 80px 0 0;
+  border: 5px solid #292524;
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  overflow: hidden;
+}
+
+/* Fogo Animado no Forno */
+.oven-fire {
+  position: absolute;
+  bottom: 0;
+  width: 100%;
+  height: 40px;
+  background: linear-gradient(to top, #ef4444, #f59e0b, transparent);
+  opacity: 0.3;
+  transition: opacity 0.4s ease;
+}
+
+.oven-graphic.baking .oven-fire {
+  opacity: 1;
+  animation: flameFlicker 0.25s infinite alternate ease-in-out;
+}
+
+/* Preview da Pizza no Forno */
+.oven-pizza-preview {
+  width: 100px;
+  height: 25px;
+  background: #d97706;
+  border-radius: 50%;
+  border: 2px solid #b45309;
+  margin-bottom: 12px;
+  opacity: 0;
+  transform: scale(0.8);
+  transition: all 0.4s ease;
+}
+
+.oven-graphic.has-pizza .oven-pizza-preview {
+  opacity: 1;
+  transform: scale(1);
+}
+
+/* Controles do Forno */
+.oven-controls {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.timer-display {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #1f2937;
+  color: #ffffff;
+  padding: 0.5rem 1rem;
+  border-radius: 12px;
+}
+
+.timer-label {
+  font-size: 0.8rem;
+  color: #9ca3af;
+  text-transform: uppercase;
+}
+
+.timer-seconds {
+  font-family: var(--font-display);
+  font-size: 1.4rem;
+  color: #fbbf24;
+  font-weight: 700;
+}
+
+/* Barra de Progresso do Forno */
+.oven-progress-container {
+  width: 100%;
+  background: #e5e7eb;
+  border-radius: 12px;
+  height: 24px;
+  position: relative;
+  overflow: hidden;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.oven-progress-bar {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, #60a5fa, #f59e0b, #10b981, #ef4444);
+  background-size: 400% 100%;
+  border-radius: 12px;
+  transition: width 0.1s linear;
+}
+
+/* Legendas das Zonas de Cozimento */
+.oven-zones {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.65rem;
+  font-weight: 800;
+  margin-top: 0.35rem;
+  color: var(--text-muted);
+}
+
+.zone-crua { color: #3b82f6; }
+.zone-perfeita { color: #10b981; }
+.zone-queimada { color: #ef4444; }
+
+/* Indicador Textual do Ponto */
+.bake-result-indicator {
+  text-align: center;
+  font-weight: 800;
+  font-size: 0.9rem;
+  padding: 0.6rem;
+  border-radius: 12px;
+  background: #f3f4f6;
+  color: var(--text-dark);
+  border: 1px solid #e5e7eb;
+  transition: all 0.3s ease;
+}
+
+.oven-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+/* --------------------------------------------------------------------------
+   8. BOTÕES GERAIS E COMPONENTES DE UI
+   -------------------------------------------------------------------------- */
+button {
+  font-family: var(--font-display);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-primary {
+  background: linear-gradient(to bottom, #10b981, #059669);
+  color: #ffffff;
+  border: none;
+  border-radius: 12px;
+  padding: 0.75rem 1rem;
+  font-size: 0.95rem;
+  font-weight: 700;
+  box-shadow: 0 4px 6px rgba(16, 185, 129, 0.3);
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: linear-gradient(to bottom, #059669, #047857);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 10px rgba(16, 185, 129, 0.4);
+}
+
+.btn-secondary {
+  background: rgba(255, 255, 255, 0.2);
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  padding: 0.4rem 0.8rem;
+  border-radius: 10px;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.btn-secondary:hover {
+  background: rgba(255, 255, 255, 0.35);
+}
+
+.btn-danger {
+  background: #fee2e2;
+  color: #b91c1c;
+  border: 1px solid #fca5a5;
+  border-radius: 12px;
+  padding: 0.75rem 1rem;
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.btn-danger:hover:not(:disabled) {
+  background: #fecaca;
+}
+
+.btn-action {
+  background: linear-gradient(to bottom, #f59e0b, #d97706);
+  color: #ffffff;
+  border: none;
+  border-radius: 12px;
+  padding: 0.75rem 1rem;
+  font-size: 0.95rem;
+  font-weight: 700;
+  box-shadow: 0 4px 6px rgba(245, 158, 11, 0.3);
+}
+
+.btn-action:hover:not(:disabled) {
+  background: linear-gradient(to bottom, #d97706, #b45309);
+  transform: translateY(-1px);
+}
+
+.btn-success {
+  background: linear-gradient(to bottom, #3b82f6, #2563eb);
+  color: #ffffff;
+  border: none;
+  border-radius: 12px;
+  padding: 0.75rem 1rem;
+  font-size: 0.95rem;
+  font-weight: 700;
+  box-shadow: 0 4px 6px rgba(59, 130, 246, 0.3);
+}
+
+.btn-success:hover:not(:disabled) {
+  background: linear-gradient(to bottom, #2563eb, #1d4ed8);
+  transform: translateY(-1px);
+}
+
+button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  transform: none !important;
+  box-shadow: none !important;
+}
+
+.btn-large {
+  padding: 0.9rem 1.8rem;
+  font-size: 1.1rem;
+}
+
+/* --------------------------------------------------------------------------
+   9. MODAL DE FEEDBACK / AVALIAÇÃO DO CLIENTE
+   -------------------------------------------------------------------------- */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.75);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  z-index: 1000;
+  animation: fadeIn 0.25s ease;
+}
+
+.modal-card {
+  background: #ffffff;
+  border-radius: 24px;
+  max-width: 440px;
+  width: 100%;
+  padding: 1.75rem;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2);
+  text-align: center;
+  animation: scaleUp 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.modal-header h2 {
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+  color: var(--primary-dark-red);
+  margin-bottom: 0.5rem;
+}
+
+.customer-reaction {
+  font-size: 4rem;
+  margin: 0.75rem 0;
+  animation: bounceReaction 1s ease infinite alternate;
+}
+
+.customer-quote {
+  font-size: 1rem;
+  font-style: italic;
+  color: var(--text-dark);
+  margin-bottom: 1.25rem;
+  background: #fefce8;
+  padding: 0.75rem;
+  border-radius: 12px;
+  border: 1px dashed #ca8a04;
+}
+
+.score-breakdown {
+  background: #f9fafb;
+  border-radius: 14px;
+  padding: 1rem;
+  margin-bottom: 1.5rem;
+  border: 1px solid #e5e7eb;
+}
+
+.score-item {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.4rem 0;
+  font-size: 0.9rem;
+  color: var(--text-muted);
+}
+
+.score-item strong {
+  color: var(--text-dark);
+}
+
+.total-score-item {
+  border-top: 2px dashed #d1d5db;
+  margin-top: 0.5rem;
+  padding-top: 0.6rem;
+  font-size: 1.1rem;
+  color: var(--primary-dark-red);
+}
+
+.total-score-item strong {
+  font-family: var(--font-display);
+  font-size: 1.4rem;
+  color: var(--primary-red);
+}
+
+.tip-item {
+  background: #ecfdf5;
+  padding: 0.5rem;
+  border-radius: 8px;
+  margin-top: 0.5rem;
+  color: #065f46;
+}
+
+.tip-item strong {
+  color: #059669;
+  font-size: 1.2rem;
+  font-family: var(--font-display);
+}
+
+/* --------------------------------------------------------------------------
+   10. RODAPÉ ACADÊMICO
+   -------------------------------------------------------------------------- */
+.game-footer {
+  text-align: center;
+  padding: 1rem;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  border-top: 1px solid #e5e7eb;
+  background: #ffffff;
+  margin-top: auto;
+}
+
+/* Classes Auxiliares */
+.hidden {
+  display: none !important;
+}
+
+/* --------------------------------------------------------------------------
+   11. ANIMAÇÕES CSS (@KEYFRAMES)
+   -------------------------------------------------------------------------- */
+@keyframes popTopping {
+  0% { transform: translate(-50%, -50%) scale(0); opacity: 0; }
+  70% { transform: translate(-50%, -50%) scale(1.3); opacity: 1; }
+  100% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+}
+
+@keyframes flameFlicker {
+  0% { height: 35px; opacity: 0.85; filter: hue-rotate(-10deg); }
+  100% { height: 48px; opacity: 1; filter: hue-rotate(15deg); }
+}
+
+@keyframes bounceSlow {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-5px); }
+}
+
+@keyframes bounceReaction {
+  0% { transform: scale(1); }
+  100% { transform: scale(1.15) rotate(5deg); }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes scaleUp {
+  from { opacity: 0; transform: scale(0.85); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+/* --------------------------------------------------------------------------
+   12. RESPONSIVIDADE (MEDIA QUERIES)
+   -------------------------------------------------------------------------- */
+@media (max-width: 1024px) {
+  .game-container {
+    grid-template-columns: 1fr 1fr;
+  }
+  .kitchen-section {
+    grid-column: span 2;
+  }
+}
+
+@media (max-width: 768px) {
+  .game-container {
+    grid-template-columns: 1fr;
+    margin: 1rem auto;
+  }
+
+  .kitchen-section {
+    grid-column: span 1;
+  }
+
+  .game-header {
+    flex-direction: column;
+    text-align: center;
+  }
+
+  .stats-bar {
+    justify-content: center;
+    width: 100%;
+  }
+
+  .pizza-board {
+    width: 240px;
+    height: 240px;
+  }
+
+  .pizza {
+    width: 200px;
+    height: 200px;
+  }
+
+  .kitchen-actions {
+    flex-direction: column;
+  }
+}

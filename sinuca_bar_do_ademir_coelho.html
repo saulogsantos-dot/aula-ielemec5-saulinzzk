@@ -1,0 +1,1258 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Sinuca Brasileira Online | Bar do Ademir Coelho (https://bardoademircoelho.com)</title>
+  <meta name="description" content="Jogo de sinuca brasileira online com regras de Par ou Ímpar, Bola na Mão, efeitos de puxadinha e topspin, 10 tacos e multiplayer 1x1 e 2x2. Bar do Ademir Coelho." />
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2310b981'><circle cx='12' cy='12' r='10' fill='%2318181b'/><circle cx='12' cy='12' r='4.5' fill='%23ffffff'/><text x='12' y='14.5' font-size='7' font-weight='900' text-anchor='middle' fill='%23000000'>8</text></svg>" />
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"Plus Jakarta Sans"', 'system-ui', 'sans-serif'],
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- React 18, ReactDOM & Babel Standalone CDN -->
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+  <!-- Canvas Confetti CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
+
+  <style>
+    body {
+      font-family: 'Plus Jakarta Sans', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+    /* Custom scrollbars */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: #0f172a; }
+    ::-webkit-scrollbar-thumb { background: #334155; border-radius: 9999px; }
+    ::-webkit-scrollbar-thumb:hover { background: #475569; }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen selection:bg-emerald-500 selection:text-slate-950 overflow-x-hidden">
+  <div id="root"></div>
+
+  <!-- Script da Aplicação em React + JSX compilado no navegador via Babel -->
+  <script type="text/babel">
+    const { useState, useEffect, useRef, useCallback, useMemo } = React;
+
+    // --- 1. CONSTANTES DA MESA E BOLAS ---
+    const TABLE_CONFIG = {
+      FIELD_WIDTH: 920,
+      FIELD_HEIGHT: 460,
+      BORDER_THICKNESS: 44,
+      CORNER_POCKET_RADIUS: 24,
+      SIDE_POCKET_RADIUS: 20,
+      BALL_RADIUS: 12.5,
+      CUSHION_RESTITUTION: 0.82,
+      BALL_RESTITUTION: 0.94,
+      CLOTH_FRICTION: 0.9885,
+      STOP_SPEED_THRESHOLD: 0.05,
+    };
+
+    const BALL_COLORS = {
+      0: { num: 0, name: 'Branca', color: '#ffffff', textColor: '#000000', type: 'cue' },
+      1: { num: 1, name: 'Amarela', color: '#facc15', textColor: '#000000', type: 'impar' },
+      2: { num: 2, name: 'Azul', color: '#2563eb', textColor: '#ffffff', type: 'par' },
+      3: { num: 3, name: 'Vermelha', color: '#dc2626', textColor: '#ffffff', type: 'impar' },
+      4: { num: 4, name: 'Roxa', color: '#7c3aed', textColor: '#ffffff', type: 'par' },
+      5: { num: 5, name: 'Laranja', color: '#ea580c', textColor: '#ffffff', type: 'impar' },
+      6: { num: 6, name: 'Verde', color: '#16a34a', textColor: '#ffffff', type: 'par' },
+      7: { num: 7, name: 'Marrom', color: '#78350f', textColor: '#ffffff', type: 'impar' },
+      8: { num: 8, name: 'Preta', color: '#09090b', textColor: '#ffffff', type: 'oito' },
+      9: { num: 9, name: 'Amarela Clara', color: '#eab308', textColor: '#000000', type: 'impar' },
+      10: { num: 10, name: 'Azul Escuro', color: '#1d4ed8', textColor: '#ffffff', type: 'par' },
+      11: { num: 11, name: 'Vermelho Rubi', color: '#b91c1c', textColor: '#ffffff', type: 'impar' },
+      12: { num: 12, name: 'Roxo Magenta', color: '#6d28d9', textColor: '#ffffff', type: 'par' },
+      13: { num: 13, name: 'Laranja Forte', color: '#c2410c', textColor: '#ffffff', type: 'impar' },
+      14: { num: 14, name: 'Verde Floresta', color: '#15803d', textColor: '#ffffff', type: 'par' },
+      15: { num: 15, name: 'Bordô', color: '#831843', textColor: '#ffffff', type: 'impar' },
+    };
+
+    const TEAM_BALLS = {
+      impar: [1, 3, 5, 7, 9, 11, 13, 15],
+      par: [2, 4, 6, 10, 12, 14],
+    };
+
+    const POCKETS = [
+      { id: 'top-left', x: 4, y: 4, radius: TABLE_CONFIG.CORNER_POCKET_RADIUS },
+      { id: 'top-mid', x: TABLE_CONFIG.FIELD_WIDTH / 2, y: 0, radius: TABLE_CONFIG.SIDE_POCKET_RADIUS },
+      { id: 'top-right', x: TABLE_CONFIG.FIELD_WIDTH - 4, y: 4, radius: TABLE_CONFIG.CORNER_POCKET_RADIUS },
+      { id: 'bot-left', x: 4, y: TABLE_CONFIG.FIELD_HEIGHT - 4, radius: TABLE_CONFIG.CORNER_POCKET_RADIUS },
+      { id: 'bot-mid', x: TABLE_CONFIG.FIELD_WIDTH / 2, y: TABLE_CONFIG.FIELD_HEIGHT, radius: TABLE_CONFIG.SIDE_POCKET_RADIUS },
+      { id: 'bot-right', x: TABLE_CONFIG.FIELD_WIDTH - 4, y: TABLE_CONFIG.FIELD_HEIGHT - 4, radius: TABLE_CONFIG.CORNER_POCKET_RADIUS },
+    ];
+
+    // --- 2. CATÁLOGO DOS 10 TACOS ---
+    const CUES_CATALOG = [
+      { id: 'cue-goiabeira', name: 'Taco de Goiabeira Clássico', description: 'O lendário taco de boteco brasileiro. Madeira maciça torneada à mão.', power: 2, spin: 2, category: 'Clássico', primaryColor: '#b45309', secondaryColor: '#78350f', gripColor: '#451a03', tipColor: '#38bdf8' },
+      { id: 'cue-ashwood', name: 'Ashwood Pro Freixo', description: 'Madeira nobre de freixo de alta densidade para tacadas com excelente controle.', power: 3, spin: 3, category: 'Profissional', primaryColor: '#d97706', secondaryColor: '#92400e', gripColor: '#1e293b', tipColor: '#0ea5e9' },
+      { id: 'cue-maple', name: 'Maple Canadense Polido', description: 'Balanço neutro ideal e virola reforçada. Dá efeito curvado com muita precisão.', power: 3, spin: 4, category: 'Profissional', primaryColor: '#fef08a', secondaryColor: '#ca8a04', gripColor: '#0f172a', tipColor: '#06b6d4' },
+      { id: 'cue-carbon', name: 'Predator Fibra de Carbono', description: 'Vara de composite ultra-rígida de carbono puro. Força máxima de impacto.', power: 5, spin: 3, category: 'Competição', primaryColor: '#334155', secondaryColor: '#0f172a', gripColor: '#020617', tipColor: '#3b82f6' },
+      { id: 'cue-marfim', name: 'Marfim Imperial Ouro', description: 'Acabamento acetinado com filetes dourados. Resposta suave ao toque da bola.', power: 4, spin: 4, category: 'Luxo', primaryColor: '#fef3c7', secondaryColor: '#d97706', gripColor: '#78350f', tipColor: '#10b981' },
+      { id: 'cue-dragao', name: 'Dragão Dourado Dinastia', description: 'Corpo esculpido com escamas de dragão. Tacada explosiva e potente.', power: 5, spin: 4, category: 'Lendário', primaryColor: '#eab308', secondaryColor: '#b45309', gripColor: '#7f1d1d', tipColor: '#f59e0b' },
+      { id: 'cue-cyberpunk', name: 'Neon Cyberpunk 2077', description: 'Iluminação luminescente futurista. Curvas extremas e efeito surreal.', power: 4, spin: 5, category: 'Especial', primaryColor: '#06b6d4', secondaryColor: '#d946ef', gripColor: '#09090b', tipColor: '#22c55e' },
+      { id: 'cue-mestre-baiano', name: 'Taco Mestre Baiano', description: 'A lenda dos salões do Brasil. Projetado para quem domina a puxadinha e o veneno.', power: 4, spin: 5, category: 'Lendário', primaryColor: '#10b981', secondaryColor: '#047857', gripColor: '#064e3b', tipColor: '#34d399' },
+      { id: 'cue-veneno', name: 'Veneno Verde Esmeralda', description: 'Especialista em efeitos laterais e bola puxada. A bola branca obedece como mágica.', power: 3, spin: 5, category: 'Especial', primaryColor: '#22c55e', secondaryColor: '#15803d', gripColor: '#14532d', tipColor: '#a855f7' },
+      { id: 'cue-titanio', name: 'Titânio Supremo V-10', description: 'Estrutura aeroespacial de titânio calibrada. 100% de força e 100% de efeito.', power: 5, spin: 5, category: 'Supremo', primaryColor: '#94a3b8', secondaryColor: '#475569', gripColor: '#0f172a', tipColor: '#ef4444' },
+    ];
+
+    // --- 3. TEMAS DA MESA ---
+    const TABLE_THEMES = [
+      { id: 'verde-classico', name: 'Verde Boteco Clássico', clothGradient: ['#13783d', '#0b5228'], woodBorder: '#5c2c10', woodAccent: '#8b4513', pocketRim: '#d4af37', description: 'A autêntica mesa dos botecos brasileiros.' },
+      { id: 'azul-torneio', name: 'Azul Torneio Oficial', clothGradient: ['#2563eb', '#1e40af'], woodBorder: '#1e293b', woodAccent: '#334155', pocketRim: '#94a3b8', description: 'Feltro azul de competição internacional.' },
+      { id: 'vermelho-imperial', name: 'Vermelho Imperial Luxo', clothGradient: ['#b91c1c', '#7f1d1d'], woodBorder: '#271010', woodAccent: '#451010', pocketRim: '#eab308', description: 'Veludo rubi com guarnições douradas.' },
+      { id: 'preto-stealth', name: 'Preto Stealth Noturno', clothGradient: ['#27272a', '#09090b'], woodBorder: '#09090b', woodAccent: '#3f3f46', pocketRim: '#06b6d4', description: 'Preto grafite e bordas metálicas modernas.' },
+      { id: 'roxo-neon', name: 'Roxo Neon VIP Lounge', clothGradient: ['#6b21a8', '#3b0764'], woodBorder: '#1c1917', woodAccent: '#7e22ce', pocketRim: '#d946ef', description: 'Feltro violeta com estética lounge noturna.' },
+    ];
+
+    // --- 4. SINTETIZADOR DE ÁUDIO WEB AUDIO API ---
+    let audioCtx = null;
+    function getAudioContext() {
+      if (!audioCtx) {
+        const AudioClass = window.AudioContext || window.webkitAudioContext;
+        if (AudioClass) audioCtx = new AudioClass();
+      }
+      if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+      return audioCtx;
+    }
+
+    function playCueHitSound(power = 50) {
+      try {
+        const ctx = getAudioContext();
+        if (!ctx) return;
+        const vol = Math.min(0.4, (power / 100) * 0.35);
+        const now = ctx.currentTime;
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(260, now);
+        osc.frequency.exponentialRampToValueAtTime(80, now + 0.07);
+        gain.gain.setValueAtTime(vol, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.07);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(now);
+        osc.stop(now + 0.07);
+      } catch (e) {}
+    }
+
+    function playBallHitSound(velocity = 5) {
+      try {
+        const ctx = getAudioContext();
+        if (!ctx) return;
+        const vol = Math.min(0.35, Math.max(0.03, (velocity / 15) * 0.3));
+        const now = ctx.currentTime;
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(3000, now);
+        osc.frequency.exponentialRampToValueAtTime(1700, now + 0.035);
+        gain.gain.setValueAtTime(vol, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.04);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(now);
+        osc.stop(now + 0.04);
+      } catch (e) {}
+    }
+
+    function playCushionHitSound(vel = 4) {
+      try {
+        const ctx = getAudioContext();
+        if (!ctx) return;
+        const now = ctx.currentTime;
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(140, now);
+        osc.frequency.exponentialRampToValueAtTime(60, now + 0.06);
+        gain.gain.setValueAtTime(0.2, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.06);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(now);
+        osc.stop(now + 0.06);
+      } catch (e) {}
+    }
+
+    function playPocketSound() {
+      try {
+        const ctx = getAudioContext();
+        if (!ctx) return;
+        const now = ctx.currentTime;
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(260, now);
+        osc.frequency.exponentialRampToValueAtTime(90, now + 0.15);
+        gain.gain.setValueAtTime(0.35, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.16);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(now);
+        osc.stop(now + 0.16);
+      } catch (e) {}
+    }
+
+    function playFoulSound() {
+      try {
+        const ctx = getAudioContext();
+        if (!ctx) return;
+        const now = ctx.currentTime;
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(180, now);
+        osc.frequency.setValueAtTime(130, now + 0.1);
+        gain.gain.setValueAtTime(0.2, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(now);
+        osc.stop(now + 0.25);
+      } catch (e) {}
+    }
+
+    // --- 5. MOTOR DE FÍSICA ---
+    function createInitialBalls() {
+      const balls = [];
+      balls.push({
+        id: 0,
+        x: TABLE_CONFIG.FIELD_WIDTH * 0.25,
+        y: TABLE_CONFIG.FIELD_HEIGHT * 0.5,
+        vx: 0, vy: 0, spinX: 0, spinY: 0, isPocketed: false,
+      });
+
+      const rack = [
+        [1],
+        [2, 9],
+        [3, 8, 10], // Bola 8 no centro da 3ª linha
+        [11, 4, 14, 5],
+        [6, 13, 7, 12, 15],
+      ];
+
+      const startX = TABLE_CONFIG.FIELD_WIDTH * 0.72;
+      const centerY = TABLE_CONFIG.FIELD_HEIGHT * 0.5;
+      const colSpacing = TABLE_CONFIG.BALL_RADIUS * Math.sqrt(3) + 0.3;
+      const rowSpacing = TABLE_CONFIG.BALL_RADIUS * 2 + 0.4;
+
+      for (let col = 0; col < rack.length; col++) {
+        const row = rack[col];
+        const colX = startX + col * colSpacing;
+        const startY = centerY - ((row.length - 1) * rowSpacing) / 2;
+        for (let r = 0; r < row.length; r++) {
+          balls.push({
+            id: row[r],
+            x: colX,
+            y: startY + r * rowSpacing,
+            vx: 0, vy: 0, spinX: 0, spinY: 0, isPocketed: false,
+          });
+        }
+      }
+      return balls;
+    }
+
+    function updatePhysics(balls, turnEvents) {
+      const SUBSTEPS = 8;
+      const dt = 1 / SUBSTEPS;
+      let anyMoving = false;
+
+      for (let step = 0; step < SUBSTEPS; step++) {
+        for (let i = 0; i < balls.length; i++) {
+          const b = balls[i];
+          if (b.isPocketed) continue;
+
+          const speedSq = b.vx * b.vx + b.vy * b.vy;
+          if (speedSq > 0.0001) anyMoving = true;
+
+          // Aplicação de spin na bola branca
+          if (b.id === 0 && (Math.abs(b.spinX) > 0.01 || Math.abs(b.spinY) > 0.01)) {
+            const speed = Math.sqrt(speedSq);
+            if (speed > 0.1) {
+              const dirX = b.vx / speed;
+              const dirY = b.vy / speed;
+              b.vx += dirX * b.spinY * 0.04 * dt;
+              b.vy += dirY * b.spinY * 0.04 * dt;
+              b.spinY *= 0.995;
+              b.spinX *= 0.995;
+            }
+          }
+
+          b.x += b.vx * dt;
+          b.y += b.vy * dt;
+
+          const friction = Math.pow(TABLE_CONFIG.CLOTH_FRICTION, dt);
+          b.vx *= friction;
+          b.vy *= friction;
+
+          if (Math.hypot(b.vx, b.vy) < TABLE_CONFIG.STOP_SPEED_THRESHOLD) {
+            b.vx = 0;
+            b.vy = 0;
+          }
+        }
+
+        // Caçapas
+        for (let i = 0; i < balls.length; i++) {
+          const b = balls[i];
+          if (b.isPocketed) continue;
+          for (let p = 0; p < POCKETS.length; p++) {
+            const pocket = POCKETS[p];
+            if (Math.hypot(b.x - pocket.x, b.y - pocket.y) < pocket.radius * 0.95) {
+              b.isPocketed = true;
+              b.vx = 0; b.vy = 0; b.spinX = 0; b.spinY = 0;
+              playPocketSound();
+              if (turnEvents && !turnEvents.pocketedBalls.includes(b.id)) {
+                turnEvents.pocketedBalls.push(b.id);
+              }
+              break;
+            }
+          }
+        }
+
+        // Tabelas
+        for (let i = 0; i < balls.length; i++) {
+          const b = balls[i];
+          if (b.isPocketed) continue;
+
+          const minX = TABLE_CONFIG.BALL_RADIUS;
+          const maxX = TABLE_CONFIG.FIELD_WIDTH - TABLE_CONFIG.BALL_RADIUS;
+          const minY = TABLE_CONFIG.BALL_RADIUS;
+          const maxY = TABLE_CONFIG.FIELD_HEIGHT - TABLE_CONFIG.BALL_RADIUS;
+          const cornerCut = TABLE_CONFIG.CORNER_POCKET_RADIUS * 1.05;
+          const sideCut = TABLE_CONFIG.SIDE_POCKET_RADIUS * 1.1;
+          const midX = TABLE_CONFIG.FIELD_WIDTH / 2;
+
+          let hit = false;
+          let impact = 0;
+
+          if (b.x < minX && b.y > cornerCut && b.y < TABLE_CONFIG.FIELD_HEIGHT - cornerCut) {
+            b.x = minX; impact = Math.abs(b.vx); b.vx = -b.vx * TABLE_CONFIG.CUSHION_RESTITUTION; b.vy += b.spinX * 0.8; hit = true;
+          }
+          if (b.x > maxX && b.y > cornerCut && b.y < TABLE_CONFIG.FIELD_HEIGHT - cornerCut) {
+            b.x = maxX; impact = Math.abs(b.vx); b.vx = -b.vx * TABLE_CONFIG.CUSHION_RESTITUTION; b.vy += b.spinX * 0.8; hit = true;
+          }
+          if (b.y < minY && ((b.x > cornerCut && b.x < midX - sideCut) || (b.x > midX + sideCut && b.x < TABLE_CONFIG.FIELD_WIDTH - cornerCut))) {
+            b.y = minY; impact = Math.abs(b.vy); b.vy = -b.vy * TABLE_CONFIG.CUSHION_RESTITUTION; b.vx -= b.spinX * 0.8; hit = true;
+          }
+          if (b.y > maxY && ((b.x > cornerCut && b.x < midX - sideCut) || (b.x > midX + sideCut && b.x < TABLE_CONFIG.FIELD_WIDTH - cornerCut))) {
+            b.y = maxY; impact = Math.abs(b.vy); b.vy = -b.vy * TABLE_CONFIG.CUSHION_RESTITUTION; b.vx -= b.spinX * 0.8; hit = true;
+          }
+
+          if (hit && impact > 0.3) playCushionHitSound(impact);
+        }
+
+        // Colisões Bola com Bola
+        for (let i = 0; i < balls.length; i++) {
+          const b1 = balls[i];
+          if (b1.isPocketed) continue;
+          for (let j = i + 1; j < balls.length; j++) {
+            const b2 = balls[j];
+            if (b2.isPocketed) continue;
+
+            const dx = b2.x - b1.x;
+            const dy = b2.y - b1.y;
+            const dist = Math.hypot(dx, dy);
+            const minDist = TABLE_CONFIG.BALL_RADIUS * 2;
+
+            if (dist < minDist && dist > 0.001) {
+              if (turnEvents && turnEvents.firstHitBall === null) {
+                if (b1.id === 0) turnEvents.firstHitBall = b2.id;
+                else if (b2.id === 0) turnEvents.firstHitBall = b1.id;
+              }
+
+              const nx = dx / dist;
+              const ny = dy / dist;
+              const overlap = minDist - dist;
+              b1.x -= nx * overlap * 0.5;
+              b1.y -= ny * overlap * 0.5;
+              b2.x += nx * overlap * 0.5;
+              b2.y += ny * overlap * 0.5;
+
+              const rvx = b2.vx - b1.vx;
+              const rvy = b2.vy - b1.vy;
+              const velNormal = rvx * nx + rvy * ny;
+
+              if (velNormal < 0) {
+                const impulse = -(1 + TABLE_CONFIG.BALL_RESTITUTION) * velNormal * 0.5;
+                b1.vx -= nx * impulse;
+                b1.vy -= ny * impulse;
+                b2.vx += nx * impulse;
+                b2.vy += ny * impulse;
+
+                if (Math.abs(velNormal) > 0.2) playBallHitSound(Math.abs(velNormal));
+
+                // Backspin / Puxadinha: branca recua após a colisão
+                if (b1.id === 0 && Math.abs(b1.spinY) > 0.1) {
+                  b1.vx += -nx * b1.spinY * 2.8;
+                  b1.vy += -ny * b1.spinY * 2.8;
+                } else if (b2.id === 0 && Math.abs(b2.spinY) > 0.1) {
+                  b2.vx += nx * b2.spinY * 2.8;
+                  b2.vy += ny * b2.spinY * 2.8;
+                }
+              }
+            }
+          }
+        }
+      }
+      return !anyMoving;
+    }
+
+    function evaluateTurnRules(turnEvents, activeBalls, currentTeam) {
+      const { firstHitBall, pocketedBalls } = turnEvents;
+      const myBalls = TEAM_BALLS[currentTeam];
+      const enemyTeam = currentTeam === 'impar' ? 'par' : 'impar';
+
+      const myRemaining = myBalls.filter(n => {
+        const b = activeBalls.find(ball => ball.id === n);
+        return b && !b.isPocketed;
+      });
+
+      const cuePocketed = pocketedBalls.includes(0);
+      const eightPocketed = pocketedBalls.includes(8);
+
+      let isFoul = false;
+      let foulReason = '';
+      let gameOver = false;
+      let winner = null;
+
+      if (eightPocketed) {
+        gameOver = true;
+        if (myRemaining.length === 0 && !cuePocketed) {
+          winner = currentTeam;
+          foulReason = 'Bola 8 encaçapada! Vitória legítima!';
+        } else {
+          winner = enemyTeam;
+          isFoul = true;
+          foulReason = 'Bola 8 caiu antes da hora! Vitória do adversário.';
+        }
+        return { isFoul, foulReason, gameOver, winner, nextTurnTeam: enemyTeam, ballInHand: isFoul };
+      }
+
+      if (cuePocketed) {
+        isFoul = true;
+        foulReason = 'Bola branca na caçapa! Infração cometida.';
+      } else if (firstHitBall === null) {
+        isFoul = true;
+        foulReason = 'Nenhuma bola atingida! Infração cometida.';
+      } else {
+        const isMyBall = myBalls.includes(firstHitBall);
+        if (myRemaining.length > 0 && !isMyBall) {
+          isFoul = true;
+          foulReason = firstHitBall === 8
+            ? 'Atingiu a Bola 8 antes de matar as suas bolas! Falta.'
+            : 'Primeiro contato em bola do adversário! Falta.';
+        } else if (myRemaining.length === 0 && firstHitBall !== 8) {
+          isFoul = true;
+          foulReason = 'Você deve mirar na Bola 8!';
+        }
+      }
+
+      let keepsTurn = false;
+      if (!isFoul) {
+        const pocketedMine = pocketedBalls.filter(n => myBalls.includes(n));
+        if (pocketedMine.length > 0) keepsTurn = true;
+      }
+
+      return {
+        isFoul,
+        foulReason,
+        gameOver: false,
+        winner: null,
+        nextTurnTeam: isFoul || !keepsTurn ? enemyTeam : currentTeam,
+        ballInHand: isFoul,
+      };
+    }
+
+    // --- 6. COMPONENTES VISUAIS ---
+
+    // Top Header com Link Oficial
+    function BarHeader() {
+      return (
+        <header className="w-full bg-slate-900/90 border-b border-slate-800 px-4 py-2.5 flex flex-wrap items-center justify-between gap-3 sticky top-0 z-40 backdrop-blur-md">
+          <div className="flex items-center gap-3">
+            <span className="w-9 h-9 rounded-2xl bg-gradient-to-tr from-amber-500 to-yellow-400 flex items-center justify-center text-slate-950 font-black text-lg shadow-md">
+              🎱
+            </span>
+            <div>
+              <h1 className="font-black text-sm sm:text-base text-white tracking-tight leading-tight">
+                Sinuca Brasileira <span className="text-emerald-400">&bull; Regra Par ou Ímpar</span>
+              </h1>
+              <p className="text-[11px] text-slate-400">
+                Mesa oficial de boteco com física realista
+              </p>
+            </div>
+          </div>
+
+          <a
+            href="https://bardoademircoelho.com"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-gradient-to-r from-amber-500/20 via-orange-500/20 to-amber-500/20 border border-amber-500/40 text-amber-300 hover:text-white hover:border-amber-400 transition text-xs font-black shadow-sm group"
+            title="Acesse o site oficial do Bar do Ademir Coelho"
+          >
+            <span>🍺</span>
+            <span>Bar do Ademir Coelho: <strong>https://bardoademircoelho.com</strong></span>
+            <span className="text-amber-400 group-hover:translate-x-0.5 transition-transform">&rarr;</span>
+          </a>
+        </header>
+      );
+    }
+
+    // Canvas da Mesa de Sinuca
+    function TableCanvas({
+      balls,
+      aimAngle,
+      onAimAngleChange,
+      powerPercent,
+      onPowerChange,
+      onShoot,
+      isShooting,
+      canShoot,
+      ballInHand,
+      onPlaceBallInHand,
+      selectedCueId,
+      selectedThemeId,
+    }) {
+      const canvasRef = useRef(null);
+      const isDraggingRef = useRef(false);
+      const dragStartRef = useRef({ x: 0, y: 0 });
+
+      const theme = TABLE_THEMES.find(t => t.id === selectedThemeId) || TABLE_THEMES[0];
+      const cue = CUES_CATALOG.find(c => c.id === selectedCueId) || CUES_CATALOG[0];
+      const cueBall = balls.find(b => b.id === 0);
+
+      const CANVAS_W = TABLE_CONFIG.FIELD_WIDTH + TABLE_CONFIG.BORDER_THICKNESS * 2;
+      const CANVAS_H = TABLE_CONFIG.FIELD_HEIGHT + TABLE_CONFIG.BORDER_THICKNESS * 2;
+
+      const getCoords = (e) => {
+        if (!canvasRef.current) return { x: 0, y: 0 };
+        const rect = canvasRef.current.getBoundingClientRect();
+        const scaleX = CANVAS_W / rect.width;
+        const scaleY = CANVAS_H / rect.height;
+        return {
+          x: (e.clientX - rect.left) * scaleX - TABLE_CONFIG.BORDER_THICKNESS,
+          y: (e.clientY - rect.top) * scaleY - TABLE_CONFIG.BORDER_THICKNESS,
+        };
+      };
+
+      const handlePointerDown = (e) => {
+        if (e.button !== 0) return;
+        const coords = getCoords(e);
+        if (ballInHand) {
+          const margin = TABLE_CONFIG.BALL_RADIUS * 1.5;
+          if (coords.x >= margin && coords.x <= TABLE_CONFIG.FIELD_WIDTH - margin && coords.y >= margin && coords.y <= TABLE_CONFIG.FIELD_HEIGHT - margin) {
+            const overlap = balls.some(b => b.id !== 0 && !b.isPocketed && Math.hypot(b.x - coords.x, b.y - coords.y) < TABLE_CONFIG.BALL_RADIUS * 2);
+            if (!overlap) {
+              onPlaceBallInHand(coords.x, coords.y);
+              return;
+            }
+          }
+        }
+        if (!canShoot || isShooting || !cueBall || cueBall.isPocketed) return;
+        isDraggingRef.current = true;
+        dragStartRef.current = { x: e.clientX, y: e.clientY };
+      };
+
+      const handlePointerMove = (e) => {
+        if (!cueBall || cueBall.isPocketed) return;
+        const coords = getCoords(e);
+        if (isDraggingRef.current) {
+          const dist = Math.hypot(e.clientX - dragStartRef.current.x, e.clientY - dragStartRef.current.y);
+          const p = Math.min(100, Math.max(0, (dist / 170) * 100));
+          onPowerChange(p);
+        } else if (canShoot && !isShooting && !ballInHand) {
+          const dx = coords.x - cueBall.x;
+          const dy = coords.y - cueBall.y;
+          if (Math.hypot(dx, dy) > 5) {
+            onAimAngleChange(Math.atan2(dy, dx));
+          }
+        }
+      };
+
+      const handlePointerUp = () => {
+        if (isDraggingRef.current) {
+          isDraggingRef.current = false;
+          if (powerPercent > 2 && canShoot && !isShooting) onShoot();
+        }
+      };
+
+      useEffect(() => {
+        const canvas = canvasRef.current;
+        if (!canvas) return;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return;
+
+        // Fundo e moldura
+        ctx.clearRect(0, 0, CANVAS_W, CANVAS_H);
+        ctx.fillStyle = theme.woodBorder;
+        ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
+
+        ctx.lineWidth = 4;
+        ctx.strokeStyle = theme.woodAccent;
+        ctx.strokeRect(6, 6, CANVAS_W - 12, CANVAS_H - 12);
+
+        // Área do Feltro
+        ctx.save();
+        ctx.translate(TABLE_CONFIG.BORDER_THICKNESS, TABLE_CONFIG.BORDER_THICKNESS);
+
+        const clothGrad = ctx.createRadialGradient(
+          TABLE_CONFIG.FIELD_WIDTH / 2, TABLE_CONFIG.FIELD_HEIGHT / 2, 40,
+          TABLE_CONFIG.FIELD_WIDTH / 2, TABLE_CONFIG.FIELD_HEIGHT / 2, TABLE_CONFIG.FIELD_WIDTH * 0.7
+        );
+        clothGrad.addColorStop(0, theme.clothGradient[0]);
+        clothGrad.addColorStop(1, theme.clothGradient[1]);
+        ctx.fillStyle = clothGrad;
+        ctx.fillRect(0, 0, TABLE_CONFIG.FIELD_WIDTH, TABLE_CONFIG.FIELD_HEIGHT);
+
+        // Demarcações (Linha do D e pontos)
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.12)';
+        ctx.lineWidth = 1.5;
+        const baulkX = TABLE_CONFIG.FIELD_WIDTH * 0.25;
+        ctx.beginPath();
+        ctx.moveTo(baulkX, 0); ctx.lineTo(baulkX, TABLE_CONFIG.FIELD_HEIGHT); ctx.stroke();
+        ctx.beginPath();
+        ctx.arc(baulkX, TABLE_CONFIG.FIELD_HEIGHT / 2, 70, Math.PI / 2, (3 * Math.PI) / 2); ctx.stroke();
+
+        // Caçapas
+        POCKETS.forEach(p => {
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, p.radius + 3, 0, Math.PI * 2);
+          ctx.fillStyle = theme.pocketRim;
+          ctx.fill();
+
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+          ctx.fillStyle = '#09090b';
+          ctx.fill();
+        });
+
+        // Mira e Ghost Ball
+        if (canShoot && !isShooting && cueBall && !cueBall.isPocketed && !ballInHand) {
+          const dirX = Math.cos(aimAngle);
+          const dirY = Math.sin(aimAngle);
+          let closestDist = 1200;
+          let targetBall = null;
+
+          balls.forEach(b => {
+            if (b.id === 0 || b.isPocketed) return;
+            const dx = b.x - cueBall.x;
+            const dy = b.y - cueBall.y;
+            const proj = dx * dirX + dy * dirY;
+            if (proj > 0) {
+              const perpDistSq = dx * dx + dy * dy - proj * proj;
+              const colR = TABLE_CONFIG.BALL_RADIUS * 2;
+              if (perpDistSq < colR * colR) {
+                const d = proj - Math.sqrt(colR * colR - perpDistSq);
+                if (d > 0 && d < closestDist) {
+                  closestDist = d;
+                  targetBall = b;
+                }
+              }
+            }
+          });
+
+          const impactX = cueBall.x + dirX * closestDist;
+          const impactY = cueBall.y + dirY * closestDist;
+
+          ctx.beginPath();
+          ctx.setLineDash([5, 5]);
+          ctx.strokeStyle = 'rgba(255, 255, 255, 0.85)';
+          ctx.lineWidth = 2;
+          ctx.moveTo(cueBall.x, cueBall.y);
+          ctx.lineTo(impactX, impactY);
+          ctx.stroke();
+
+          if (targetBall) {
+            ctx.setLineDash([]);
+            ctx.beginPath();
+            ctx.arc(impactX, impactY, TABLE_CONFIG.BALL_RADIUS, 0, Math.PI * 2);
+            ctx.strokeStyle = '#ffffff';
+            ctx.fillStyle = 'rgba(255,255,255,0.2)';
+            ctx.fill(); ctx.stroke();
+
+            const nX = (targetBall.x - impactX) / (Math.hypot(targetBall.x - impactX, targetBall.y - impactY) || 1);
+            const nY = (targetBall.y - impactY) / (Math.hypot(targetBall.x - impactX, targetBall.y - impactY) || 1);
+            ctx.beginPath();
+            ctx.strokeStyle = '#facc15';
+            ctx.lineWidth = 2;
+            ctx.moveTo(targetBall.x, targetBall.y);
+            ctx.lineTo(targetBall.x + nX * 60, targetBall.y + nY * 60);
+            ctx.stroke();
+          }
+        }
+
+        // Bolas
+        balls.forEach(b => {
+          if (b.isPocketed) return;
+          ctx.save();
+          // Sombra
+          ctx.beginPath();
+          ctx.ellipse(b.x + 2, b.y + 3, TABLE_CONFIG.BALL_RADIUS * 0.95, TABLE_CONFIG.BALL_RADIUS * 0.8, 0, 0, Math.PI * 2);
+          ctx.fillStyle = 'rgba(0,0,0,0.35)'; ctx.fill();
+
+          const info = BALL_COLORS[b.id] || BALL_COLORS[0];
+          const grad = ctx.createRadialGradient(
+            b.x - TABLE_CONFIG.BALL_RADIUS * 0.35, b.y - TABLE_CONFIG.BALL_RADIUS * 0.35, 1,
+            b.x, b.y, TABLE_CONFIG.BALL_RADIUS
+          );
+
+          if (b.id === 0) {
+            grad.addColorStop(0, '#ffffff'); grad.addColorStop(0.8, '#e2e8f0'); grad.addColorStop(1, '#94a3b8');
+          } else if (b.id === 8) {
+            grad.addColorStop(0, '#52525b'); grad.addColorStop(0.7, '#18181b'); grad.addColorStop(1, '#000000');
+          } else {
+            grad.addColorStop(0, '#ffffff'); grad.addColorStop(0.25, info.color); grad.addColorStop(1, '#09090b');
+          }
+
+          ctx.beginPath();
+          ctx.arc(b.x, b.y, TABLE_CONFIG.BALL_RADIUS, 0, Math.PI * 2);
+          ctx.fillStyle = grad;
+          ctx.fill();
+
+          if (b.id > 0) {
+            ctx.beginPath();
+            ctx.arc(b.x, b.y, TABLE_CONFIG.BALL_RADIUS * 0.48, 0, Math.PI * 2);
+            ctx.fillStyle = '#ffffff'; ctx.fill();
+            ctx.fillStyle = '#000000';
+            ctx.font = 'bold 8px system-ui, sans-serif';
+            ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+            ctx.fillText(String(b.id), b.x, b.y + 0.5);
+          }
+          ctx.restore();
+        });
+
+        // Taco de Sinuca
+        if (canShoot && !isShooting && cueBall && !cueBall.isPocketed && !ballInHand) {
+          ctx.save();
+          ctx.translate(cueBall.x, cueBall.y);
+          ctx.rotate(aimAngle);
+          const offset = TABLE_CONFIG.BALL_RADIUS + 12 + (powerPercent / 100) * 65;
+          ctx.translate(-offset - 260, 0);
+
+          // Vara
+          ctx.fillStyle = cue.primaryColor;
+          ctx.fillRect(90, -4, 155, 8);
+          // Culatra
+          ctx.fillStyle = cue.gripColor;
+          ctx.fillRect(0, -6, 90, 12);
+          // Virola
+          ctx.fillStyle = cue.tipColor;
+          ctx.fillRect(245, -3, 15, 6);
+          ctx.restore();
+        }
+
+        ctx.restore();
+      }, [balls, aimAngle, powerPercent, isShooting, canShoot, ballInHand, theme, cue, cueBall]);
+
+      return (
+        <div className="relative rounded-[36px] p-2 bg-gradient-to-br from-slate-800 to-slate-950 shadow-2xl border-4 border-slate-700/60 max-w-full overflow-hidden">
+          <canvas
+            ref={canvasRef}
+            width={CANVAS_W}
+            height={CANVAS_H}
+            onPointerDown={handlePointerDown}
+            onPointerMove={handlePointerMove}
+            onPointerUp={handlePointerUp}
+            className={`rounded-[28px] block ${ballInHand ? 'cursor-grab active:cursor-grabbing' : 'cursor-crosshair'}`}
+            style={{ maxWidth: '100%', height: 'auto', aspectRatio: `${CANVAS_W} / ${CANVAS_H}` }}
+          />
+        </div>
+      );
+    }
+
+    // HUD Superior
+    function GameHUD({ gameMode, players, currentTeam, activeBalls, ballInHand, roomCode, onOpenCues, onOpenThemes }) {
+      const remainingImpar = TEAM_BALLS.impar.filter(n => {
+        const b = activeBalls.find(x => x.id === n);
+        return b && !b.isPocketed;
+      });
+      const remainingPar = TEAM_BALLS.par.filter(n => {
+        const b = activeBalls.find(x => x.id === n);
+        return b && !b.isPocketed;
+      });
+      const eightBall = activeBalls.find(b => b.id === 8);
+      const isEightInPlay = eightBall && !eightBall.isPocketed;
+
+      return (
+        <div className="w-full max-w-5xl mx-auto mb-3">
+          <div className="flex flex-wrap items-center justify-between gap-2 px-2 py-1 mb-2 text-xs">
+            <div className="flex items-center gap-2">
+              <span className="px-3 py-1 rounded-xl bg-slate-900 border border-slate-700 text-white font-bold flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
+                Sala: {roomCode || 'TREINO'} ({gameMode})
+              </span>
+              {ballInHand && (
+                <span className="px-3 py-1 rounded-xl bg-amber-500/20 border border-amber-500/40 text-amber-300 font-bold animate-pulse">
+                  ⚠️ BOLA NA MÃO! Clique na mesa para posicionar
+                </span>
+              )}
+            </div>
+
+            <div className="flex items-center gap-1.5">
+              <a
+                href="https://bardoademircoelho.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="px-3 py-1.5 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 hover:text-white border border-amber-500/30 text-xs font-bold transition flex items-center gap-1"
+              >
+                <span>🍺 Bar do Ademir Coelho</span>
+              </a>
+              <button onClick={onOpenThemes} className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-semibold transition">
+                🎨 Temas
+              </button>
+              <button onClick={onOpenCues} className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-semibold transition">
+                🪄 Tacos (1-5)
+              </button>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 bg-slate-900/90 border border-slate-800 rounded-3xl p-3.5 shadow-xl">
+            {/* Lado Ímpar */}
+            <div className={`p-3 rounded-2xl border transition-all ${currentTeam === 'impar' ? 'bg-amber-500/10 border-amber-500/70 ring-2 ring-amber-500/30' : 'bg-slate-800/40 border-slate-700/40 opacity-70'}`}>
+              <div className="flex items-center justify-between mb-2">
+                <div>
+                  <h3 className="font-black text-sm text-white">TIME ÍMPAR</h3>
+                  <span className="text-xs text-amber-400 font-bold">
+                    {remainingImpar.length > 0 ? `Faltam ${remainingImpar.length} bolas` : '🎯 MATAR BOLA 8!'}
+                  </span>
+                </div>
+              </div>
+              <div className="flex flex-wrap items-center gap-1.5">
+                {TEAM_BALLS.impar.map(n => {
+                  const b = activeBalls.find(x => x.id === n);
+                  const done = b && b.isPocketed;
+                  return (
+                    <div key={n} className={`w-6 h-6 rounded-full flex items-center justify-center font-bold text-[10px] shadow border ${done ? 'opacity-20 grayscale border-transparent' : 'border-white/40'}`} style={{ backgroundColor: BALL_COLORS[n].color, color: BALL_COLORS[n].textColor }}>
+                      {n}
+                    </div>
+                  );
+                })}
+                <div className={`w-6 h-6 rounded-full flex items-center justify-center font-bold text-[10px] border ml-1 ${remainingImpar.length === 0 && isEightInPlay ? 'bg-black text-white border-amber-400 ring-2 ring-amber-400 animate-bounce' : 'bg-black/40 text-slate-600 border-slate-800 opacity-40'}`}>
+                  8
+                </div>
+              </div>
+            </div>
+
+            {/* Lado Par */}
+            <div className={`p-3 rounded-2xl border transition-all ${currentTeam === 'par' ? 'bg-blue-500/10 border-blue-500/70 ring-2 ring-blue-500/30' : 'bg-slate-800/40 border-slate-700/40 opacity-70'}`}>
+              <div className="flex items-center justify-between mb-2">
+                <div>
+                  <h3 className="font-black text-sm text-white">TIME PAR</h3>
+                  <span className="text-xs text-blue-400 font-bold">
+                    {remainingPar.length > 0 ? `Faltam ${remainingPar.length} bolas` : '🎯 MATAR BOLA 8!'}
+                  </span>
+                </div>
+              </div>
+              <div className="flex flex-wrap items-center gap-1.5">
+                {TEAM_BALLS.par.map(n => {
+                  const b = activeBalls.find(x => x.id === n);
+                  const done = b && b.isPocketed;
+                  return (
+                    <div key={n} className={`w-6 h-6 rounded-full flex items-center justify-center font-bold text-[10px] shadow border ${done ? 'opacity-20 grayscale border-transparent' : 'border-white/40'}`} style={{ backgroundColor: BALL_COLORS[n].color, color: BALL_COLORS[n].textColor }}>
+                      {n}
+                    </div>
+                  );
+                })}
+                <div className={`w-6 h-6 rounded-full flex items-center justify-center font-bold text-[10px] border ml-1 ${remainingPar.length === 0 && isEightInPlay ? 'bg-black text-white border-blue-400 ring-2 ring-blue-400 animate-bounce' : 'bg-black/40 text-slate-600 border-slate-800 opacity-40'}`}>
+                  8
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // Controle de Efeito (Spin)
+    function SpinWidget({ spin, onSpinChange, cueSpinStat = 3 }) {
+      const containerRef = useRef(null);
+      const RADIUS = 40;
+
+      const updatePointer = (clientX, clientY) => {
+        if (!containerRef.current) return;
+        const rect = containerRef.current.getBoundingClientRect();
+        const dx = clientX - (rect.left + rect.width / 2);
+        const dy = clientY - (rect.top + rect.height / 2);
+        const maxR = RADIUS * 0.82;
+        onSpinChange({
+          x: Math.max(-1, Math.min(1, dx / maxR)),
+          y: Math.max(-1, Math.min(1, -dy / maxR)),
+        });
+      };
+
+      return (
+        <div className="bg-slate-900/90 border border-slate-800 rounded-3xl p-3 shadow-xl flex flex-col items-center w-40">
+          <div className="flex items-center justify-between w-full mb-1">
+            <span className="text-[10px] font-bold uppercase text-slate-300">Efeito (Spin)</span>
+            <button onClick={() => onSpinChange({ x: 0, y: 0 })} className="text-[10px] text-slate-400 hover:text-white">Zerar</button>
+          </div>
+          <div
+            ref={containerRef}
+            onPointerDown={(e) => updatePointer(e.clientX, e.clientY)}
+            className="relative w-20 h-20 rounded-full cursor-crosshair shadow-inner my-1 flex items-center justify-center"
+            style={{ background: 'radial-gradient(circle at 35% 35%, #ffffff 0%, #cbd5e1 50%, #64748b 100%)' }}
+            title="Clique para escolher onde o taco bate na bola branca"
+          >
+            <div className="absolute inset-x-0 h-px bg-slate-400/40 pointer-events-none" />
+            <div className="absolute inset-y-0 w-px bg-slate-400/40 pointer-events-none" />
+            <div
+              className="absolute w-3.5 h-3.5 rounded-full bg-red-600 border border-white shadow-md pointer-events-none"
+              style={{ transform: `translate(${(spin.x || 0) * RADIUS * 0.8}px, ${-(spin.y || 0) * RADIUS * 0.8}px)` }}
+            />
+          </div>
+          <span className="text-[10px] font-extrabold text-cyan-400 block mt-1">
+            {spin.y > 0.2 ? 'Topspin (Corrida)' : spin.y < -0.2 ? 'Backspin (Puxadinha)' : 'Centro'}
+          </span>
+          <span className="text-[9px] text-slate-400">Taco: {cueSpinStat}/5 efeito</span>
+        </div>
+      );
+    }
+
+    // Barra de Força Vertical
+    function PowerWidget({ powerPercent, onPowerChange, cuePowerStat = 3 }) {
+      const barRef = useRef(null);
+
+      const updatePower = (clientY) => {
+        if (!barRef.current) return;
+        const rect = barRef.current.getBoundingClientRect();
+        const p = Math.max(0, Math.min(100, Math.round(((rect.bottom - clientY) / rect.height) * 100)));
+        onPowerChange(p);
+      };
+
+      return (
+        <div className="bg-slate-900/90 border border-slate-800 rounded-3xl p-3 shadow-xl flex flex-col items-center w-16">
+          <span className="text-[10px] font-black uppercase text-amber-400 mb-1">Força</span>
+          <div
+            ref={barRef}
+            onPointerDown={(e) => updatePower(e.clientY)}
+            className="relative w-8 h-60 bg-slate-950 rounded-2xl border border-slate-700 p-1 cursor-ns-resize shadow-inner flex flex-col justify-end"
+            title="Barra de Força"
+          >
+            <div
+              className="w-full rounded-xl bg-gradient-to-t from-emerald-500 via-amber-400 to-red-500 transition-all duration-75"
+              style={{ height: `${Math.max(2, powerPercent)}%` }}
+            />
+          </div>
+          <span className="text-xs font-black text-white mt-1.5">{Math.round(powerPercent)}%</span>
+          <span className="text-[9px] text-amber-400 font-bold">Taco {cuePowerStat}/5</span>
+        </div>
+      );
+    }
+
+    // --- 7. APLICAÇÃO PRINCIPAL ---
+    function App() {
+      const [view, setView] = useState('lobby'); // 'lobby' | 'game'
+      const [playerName, setPlayerName] = useState('Mestre da Sinuca');
+      const [playerAvatar, setPlayerAvatar] = useState('🎱');
+      const [selectedCueId, setSelectedCueId] = useState('cue-goiabeira');
+      const [selectedThemeId, setSelectedThemeId] = useState('verde-classico');
+      const [gameMode, setGameMode] = useState('1x1');
+      const [roomCode, setRoomCode] = useState('TREINO-LOCAL');
+
+      // Estado do Jogo
+      const [balls, setBalls] = useState(createInitialBalls);
+      const [isPhysicsRunning, setIsPhysicsRunning] = useState(false);
+      const [aimAngle, setAimAngle] = useState(0);
+      const [powerPercent, setPowerPercent] = useState(0);
+      const [spin, setSpin] = useState({ x: 0, y: 0 });
+      const [currentTeam, setCurrentTeam] = useState('impar');
+      const [ballInHand, setBallInHand] = useState(false);
+      const [foulReason, setFoulReason] = useState(null);
+      const [gameOver, setGameOver] = useState(false);
+      const [winner, setWinner] = useState(null);
+
+      // Modais
+      const [isCuesOpen, setIsCuesOpen] = useState(false);
+      const [isThemesOpen, setIsThemesOpen] = useState(false);
+
+      const ballsRef = useRef(balls);
+      ballsRef.current = balls;
+      const turnEventsRef = useRef({ firstHitBall: null, pocketedBalls: [], cushionHit: false });
+      const animFrameRef = useRef(null);
+
+      const currentCue = CUES_CATALOG.find(c => c.id === selectedCueId) || CUES_CATALOG[0];
+
+      // Loop de Física
+      const runPhysics = useCallback(() => {
+        const copy = ballsRef.current.map(b => ({ ...b }));
+        const allStopped = updatePhysics(copy, turnEventsRef.current);
+        setBalls(copy);
+
+        if (!allStopped) {
+          animFrameRef.current = requestAnimationFrame(runPhysics);
+        } else {
+          setIsPhysicsRunning(false);
+          const result = evaluateTurnRules(turnEventsRef.current, copy, currentTeam);
+
+          // Restaura a branca se suicidou
+          const cueB = copy.find(b => b.id === 0);
+          if (cueB && cueB.isPocketed) {
+            cueB.isPocketed = false;
+            cueB.x = TABLE_CONFIG.FIELD_WIDTH * 0.25;
+            cueB.y = TABLE_CONFIG.FIELD_HEIGHT * 0.5;
+            cueB.vx = 0; cueB.vy = 0;
+            setBalls([...copy]);
+          }
+
+          if (result.gameOver) {
+            setGameOver(true);
+            setWinner(result.winner);
+            try { confetti(); } catch (e) {}
+            return;
+          }
+
+          if (result.isFoul) {
+            playFoulSound();
+            setFoulReason(result.foulReason);
+            setBallInHand(true);
+          } else {
+            setBallInHand(false);
+          }
+          setCurrentTeam(result.nextTurnTeam);
+        }
+      }, [currentTeam]);
+
+      const handleShoot = () => {
+        if (isPhysicsRunning || powerPercent <= 2) return;
+        const speed = (powerPercent / 100) * (15 + currentCue.power * 2.8);
+
+        const updated = ballsRef.current.map(b => {
+          if (b.id === 0) {
+            return {
+              ...b,
+              vx: Math.cos(aimAngle) * speed,
+              vy: Math.sin(aimAngle) * speed,
+              spinX: spin.x * (currentCue.spin * 0.7),
+              spinY: spin.y * (currentCue.spin * 0.7),
+            };
+          }
+          return { ...b };
+        });
+
+        playCueHitSound(powerPercent);
+        setBalls(updated);
+        turnEventsRef.current = { firstHitBall: null, pocketedBalls: [], cushionHit: false };
+        setPowerPercent(0);
+        setIsPhysicsRunning(true);
+        animFrameRef.current = requestAnimationFrame(runPhysics);
+      };
+
+      const handlePlaceBall = (x, y) => {
+        const updated = ballsRef.current.map(b => b.id === 0 ? { ...b, x, y, vx: 0, vy: 0, isPocketed: false } : b);
+        setBalls(updated);
+        setBallInHand(false);
+      };
+
+      const handleRestart = () => {
+        setBalls(createInitialBalls());
+        setIsPhysicsRunning(false);
+        setGameOver(false);
+        setWinner(null);
+        setCurrentTeam('impar');
+        setBallInHand(false);
+        setFoulReason(null);
+      };
+
+      return (
+        <div className="min-h-screen bg-slate-950 flex flex-col items-center">
+          <BarHeader />
+
+          {view === 'lobby' ? (
+            <div className="w-full max-w-xl mx-auto my-8 p-6 bg-slate-900 border border-slate-800 rounded-3xl shadow-2xl">
+              <div className="text-center mb-6">
+                <span className="text-xs font-black px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 uppercase tracking-wider">
+                  Bar do Ademir Coelho Apresenta
+                </span>
+                <h2 className="text-3xl font-black text-white mt-2">SINUCA BRASILEIRA</h2>
+                <p className="text-xs text-slate-400 mt-1">Regras Par ou Ímpar &bull; Bola na Mão &bull; Efeitos Reais</p>
+              </div>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-xs font-bold text-slate-300 uppercase mb-1">Seu Nome</label>
+                  <input
+                    type="text"
+                    value={playerName}
+                    onChange={(e) => setPlayerName(e.target.value)}
+                    className="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-slate-700 text-white font-bold text-sm"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <button onClick={() => setIsCuesOpen(true)} className="p-3 rounded-2xl bg-slate-950 border border-slate-800 hover:border-slate-700 text-left">
+                    <span className="text-[10px] text-slate-400 uppercase font-bold block">Taco Equipado</span>
+                    <span className="text-xs font-bold text-amber-400 block">{currentCue.name}</span>
+                  </button>
+                  <button onClick={() => setIsThemesOpen(true)} className="p-3 rounded-2xl bg-slate-950 border border-slate-800 hover:border-slate-700 text-left">
+                    <span className="text-[10px] text-slate-400 uppercase font-bold block">Tema da Mesa</span>
+                    <span className="text-xs font-bold text-emerald-400 block">Personalizar</span>
+                  </button>
+                </div>
+
+                <button
+                  onClick={() => setView('game')}
+                  className="w-full py-4 rounded-2xl bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-black text-sm tracking-wider shadow-lg transition"
+                >
+                  JOGAR AGORA NA MESA DO BAR DO ADEMIR COELHO
+                </button>
+              </div>
+
+              <div className="mt-6 pt-4 border-t border-slate-800 text-center">
+                <a
+                  href="https://bardoademircoelho.com"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-xs font-black text-amber-400 hover:text-amber-300 underline underline-offset-2"
+                >
+                  🍺 Visite: https://bardoademircoelho.com
+                </a>
+              </div>
+            </div>
+          ) : (
+            <div className="w-full flex flex-col items-center p-2 sm:p-4">
+              <GameHUD
+                gameMode={gameMode}
+                currentTeam={currentTeam}
+                activeBalls={balls}
+                ballInHand={ballInHand}
+                roomCode={roomCode}
+                onOpenCues={() => setIsCuesOpen(true)}
+                onOpenThemes={() => setIsThemesOpen(true)}
+              />
+
+              {foulReason && (
+                <div className="mb-2 px-4 py-2 bg-red-500 text-white font-bold text-xs rounded-xl shadow-lg animate-bounce">
+                  ⚠️ {foulReason} - O adversário tem BOLA NA MÃO!
+                </div>
+              )}
+
+              <div className="w-full max-w-6xl flex flex-col lg:flex-row items-center justify-center gap-4">
+                <TableCanvas
+                  balls={balls}
+                  aimAngle={aimAngle}
+                  onAimAngleChange={setAimAngle}
+                  powerPercent={powerPercent}
+                  onPowerChange={setPowerPercent}
+                  onShoot={handleShoot}
+                  isShooting={isPhysicsRunning}
+                  canShoot={!isPhysicsRunning && !gameOver}
+                  ballInHand={ballInHand}
+                  onPlaceBallInHand={handlePlaceBall}
+                  selectedCueId={selectedCueId}
+                  selectedThemeId={selectedThemeId}
+                />
+
+                <div className="flex flex-row lg:flex-col items-center gap-3">
+                  <SpinWidget spin={spin} onSpinChange={setSpin} cueSpinStat={currentCue.spin} />
+                  <PowerWidget powerPercent={powerPercent} onPowerChange={setPowerPercent} cuePowerStat={currentCue.power} />
+                </div>
+              </div>
+
+              <div className="mt-4 flex gap-3 text-xs">
+                <button onClick={() => setView('lobby')} className="px-4 py-2 rounded-xl bg-slate-800 text-slate-300 font-bold hover:bg-slate-700">
+                  Voltar ao Menu
+                </button>
+                <button onClick={handleRestart} className="px-4 py-2 rounded-xl bg-emerald-600 text-white font-bold hover:bg-emerald-500">
+                  Reiniciar Mesa
+                </button>
+              </div>
+
+              <div className="mt-3 text-center text-xs text-slate-500">
+                <a href="https://bardoademircoelho.com" target="_blank" rel="noopener noreferrer" className="text-amber-400 font-bold hover:underline">
+                  🍺 Bar do Ademir Coelho &bull; https://bardoademircoelho.com
+                </a>
+              </div>
+            </div>
+          )}
+
+          {/* Modal de Tacos */}
+          {isCuesOpen && (
+            <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50">
+              <div className="bg-slate-900 border border-slate-800 p-6 rounded-3xl max-w-2xl w-full max-h-[80vh] overflow-y-auto">
+                <h3 className="text-lg font-black text-white mb-4">Escolha seu Taco (Força 1-5 &bull; Efeito 1-5)</h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {CUES_CATALOG.map(c => (
+                    <div
+                      key={c.id}
+                      onClick={() => { setSelectedCueId(c.id); setIsCuesOpen(false); }}
+                      className={`p-3 rounded-2xl border cursor-pointer ${selectedCueId === c.id ? 'bg-amber-500/20 border-amber-500 ring-2 ring-amber-500' : 'bg-slate-800 border-slate-700'}`}
+                    >
+                      <div className="font-bold text-white text-sm">{c.name}</div>
+                      <div className="text-xs text-slate-400 mt-1">{c.description}</div>
+                      <div className="flex gap-4 text-xs font-bold mt-2">
+                        <span className="text-amber-400">⚡ Força: {c.power}/5</span>
+                        <span className="text-cyan-400">🎯 Efeito: {c.spin}/5</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <button onClick={() => setIsCuesOpen(false)} className="mt-4 w-full py-2 bg-slate-800 text-white font-bold rounded-xl">Fechar</button>
+              </div>
+            </div>
+          )}
+
+          {/* Modal de Temas */}
+          {isThemesOpen && (
+            <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50">
+              <div className="bg-slate-900 border border-slate-800 p-6 rounded-3xl max-w-md w-full">
+                <h3 className="text-lg font-black text-white mb-4">Temas da Mesa & Feltro</h3>
+                <div className="space-y-2">
+                  {TABLE_THEMES.map(t => (
+                    <div
+                      key={t.id}
+                      onClick={() => { setSelectedThemeId(t.id); setIsThemesOpen(false); }}
+                      className={`p-3 rounded-2xl border cursor-pointer flex items-center justify-between ${selectedThemeId === t.id ? 'bg-emerald-500/20 border-emerald-500' : 'bg-slate-800 border-slate-700'}`}
+                    >
+                      <div>
+                        <div className="font-bold text-white text-sm">{t.name}</div>
+                        <div className="text-xs text-slate-400">{t.description}</div>
+                      </div>
+                      <span className="w-6 h-6 rounded-full border border-white" style={{ background: t.clothGradient[0] }} />
+                    </div>
+                  ))}
+                </div>
+                <button onClick={() => setIsThemesOpen(false)} className="mt-4 w-full py-2 bg-slate-800 text-white font-bold rounded-xl">Fechar</button>
+              </div>
+            </div>
+          )}
+
+          {/* Modal Fim de Jogo */}
+          {gameOver && (
+            <div className="fixed inset-0 bg-black/85 flex items-center justify-center p-4 z-50">
+              <div className="bg-slate-900 border border-slate-800 p-6 rounded-3xl max-w-sm w-full text-center space-y-4">
+                <span className="text-5xl block animate-bounce">🏆</span>
+                <h3 className="text-2xl font-black text-white">VITÓRIA DO TIME {winner?.toUpperCase()}!</h3>
+                <p className="text-xs text-slate-400">Partida finalizada com sucesso no Bar do Ademir Coelho!</p>
+                <button onClick={handleRestart} className="w-full py-3 bg-emerald-500 text-slate-950 font-black rounded-xl">Jogar Novamente</button>
+              </div>
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<App />);
+  </script>
+</body>
+</html>
